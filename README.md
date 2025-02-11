@@ -2,6 +2,6 @@
 Homeworks from practical sessions @Dauphine
 
 - R Introduction -
-Impacts de la pandémie sur l'équilibre entre vie professionnelle et vie personnelle selon le genre et les caractéristiques socioéconomiques des foyers français
+Impacts of the Pandemic on the Balance Between Professional and Personal Life Based on Gender and Socioeconomic Characteristics of French Households
 
-- VBA -
+- VBA - Portfolio Allocation (3 TDs)
