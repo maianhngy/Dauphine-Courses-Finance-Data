@@ -1,0 +1,809 @@
+---
+title: "Impacts de la pandémie sur l'équilibre entre vie professionnelle et vie personnelle selon le genre et les caractéristiques socioéconomiques des foyers français"
+author: "Camille Pilon et Mai Anh Nguyen"
+output:
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true  
+  pdf_document:
+    latex_engine: xelatex
+    fig_width: 4
+    fig_height: 3
+  word_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+# Déclaration sur l'honneur
+
+Nous déclarons sur l'honneur que ce mémoire a été écrit de notre main,
+sans aide extérieure non autorisée, qu'il n'a pas été présenté
+auparavant pour évaluation et qu'il n'a jamais été publié, dans sa
+totalité ou en partie. Toutes parties, groupes de mots ou idées, aussi
+limités soient-ils, y compris des tableaux, graphiques, cartes etc. qui
+sont empruntés ou qui font référence à d'autres sources bibliographiques
+sont présentés comme tels, sans exception aucune.
+
+```{=latex}
+\begin{table}[h!]
+\centering
+\begin{tabular}{cc}
+\includegraphics[width=0.3\textwidth]{/Users/vuanhtuan/Desktop/projet stat/signature_maianh.png}
+& \includegraphics[width=0.3\textwidth]{/Users/vuanhtuan/Desktop/projet stat/signature_camille.png} \\
+NGUYEN VU Mai Anh & PILON Camille \\
+\end{tabular}
+\end{table}
+```
+
+# Introduction
+
+La pandémie de COVID-19 a bouleversé les modes de vie à l’échelle
+mondiale, entraînant des conséquences majeures sur les structures
+sociales, économiques et familiales. En Europe, les confinements
+successifs, la fermeture des écoles ainsi que l’explosion du télétravail
+ont accentué le poids des tâches domestiques au sein des ménages. Ces
+bouleversements ont profondément affecté l’équilibre entre vie
+professionnelle et vie personnelle, révélant et amplifiant les
+inégalités préexistantes, notamment celles liées au genre. Les femmes,
+souvent en première ligne des responsabilités familiales ont été
+particulièrement touchées. Dans ce contexte, il est crucial d’analyser
+l’impact différencié du Covid-19 sur ces facteurs socio-économiques.
+
+Quelles ont été les conséquences de la crise du COVID-19 sur le temps
+consacré aux tâches domestiques chez les femmes et les hommes ? Ce
+changement est-il indépendant de l’influence du niveau social des
+ménages ? C’est autour de ces questions que s’articule notre
+problématique principale : **Dans quelle mesure la crise de la COVID-19
+a-t-elle amplifié les inégalités de genre dans la répartition des tâches
+domestiques et comment ces dynamiques varient-elles en fonction du
+niveau socio-économique des ménages français ?**
+
+```{r setup, include=FALSE,echo=FALSE, results='hide',message=FALSE}
+rm(list=ls())
+library(Hmisc)
+library(dplyr)
+library(ggplot2)
+library(rstudioapi)
+library(tinytex)
+options(digits = 3)
+base=spss.get('/Users/vuanhtuan/Desktop/projet stat/ZA8751_v1-0-0.sav', use.value.labels=TRUE)
+base=as.data.frame(base)
+View(base)
+write.table(base,"/Users/vuanhtuan/Desktop/projet stat/projet.xls",sep="\t",row.names=FALSE,dec=".")
+
+BaseOut <- base %>% select(7,49,50,86,91,92,189,197,198,202)
+View(BaseOut)
+
+BaseOut <- BaseOut[13001:15500, ]
+
+for (j in 1:6) {
+  for (i in 1:2500) {if (is.na(BaseOut[i, 2]) && is.na(BaseOut[i, 3])) {BaseOut <- BaseOut[-i, ]}}
+  for (i in 1:2500) {if (is.na(BaseOut[i, 4]) && is.na(BaseOut[i, 5]) && is.na(BaseOut[i, 6])) {BaseOut <- BaseOut[-i, ]}}}
+View(BaseOut)
+
+BaseOut <- BaseOut %>%
+  mutate(TM_apres = 0 ) %>%
+  select(1,2,TM_apres, everything())
+
+BaseOut <- BaseOut %>%
+  mutate(TM_avant = 0 ) %>%
+  select(1,2,3,4,TM_avant, everything())
+
+BaseOut <- BaseOut %>%
+  mutate(Secteurs = 0 ) %>%
+  select(1,2,3,4,5,6, Secteurs, everything())
+
+BaseOut <- BaseOut %>%
+  mutate(Nivétudes=0) %>%
+  select(1,2,3,4,5,6,7,8,9,10,11,12, Nivétudes, everything())
+
+BaseOut <- BaseOut %>%
+  mutate(NivétudesPartenaire=0) %>%
+  select(1,2,3,4,5,6,7,8,9,10,11,12,13,14, NivétudesPartenaire, everything())
+
+BaseOut <- BaseOut %>%
+  mutate(ComparNiv=0) %>%
+  select(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15, ComparNiv, everything())
+
+trier <- function(value) {
+  if (is.na(value)) {
+    return(4)
+  } else if (value == "Agriculture, Forestry, Fishery") {
+    return(1)
+  } else if (value %in% c("Construction", "Chemical industry", "Mining and heavy industry", 
+                          "Manufacturing of consumer goods except food, beverages, tobacco, textile, apparel, leather", 
+                          "Manufacturing of fabricated metal products, except machinery and equipment", 
+                          "Manufacturing of machinery and equipment, except electrical equipment", 
+                          "Energy and water supply, sewerage and waste management", 
+                          "Manufacturing of food, beverages and tobacco", 
+                          "Manufacturing of transport equipment", 
+                          "Manufacturing of textile, apparel, leather, footwear and related products", 
+                          "Manufacturing of electrical equipment, computer, electronic and optical products", 
+                          "Wood processing, paper and printing")) {
+    return(2)} 
+    else if (value == "Don t know" || value == "Prefer not to answer") {
+    return(4)} 
+    else {return(3)}}
+
+for (i in 1:nrow(BaseOut)) {BaseOut[i,7] <- trier(BaseOut[i, 6])}
+
+Nivétudes <- function(value) {
+  if (is.na(value)) {
+    return(0)
+  } else if (value == "Primary education or less") {
+    return(1)
+  } else if (value == "Lower secondary education or equivalent level") {
+    return(2)
+  } else if (value == "Secondary education") {
+    return(3)
+  } else if (value == "Post-secondary education") {
+    return(4)
+  } else if (value == "Short-cycle tertiary") {
+    return(5)
+  } else if (value == "University: Bachelors or equivalent level") {
+    return(6)
+  } else if (value == "University: Masters or equivalent level") {
+    return(7)
+  } else if (value == "University: Doctoral (PhD) or equivalent level") {
+    return(8)
+  } else {
+    return(0)}}
+
+for (i in 1:nrow(BaseOut)) {
+  BaseOut[i,13] <- Nivétudes(BaseOut[i, 12])
+  BaseOut[i,15] <- Nivétudes(BaseOut[i, 14])}
+
+ComparNiv <- function(value1,value2) {
+  if (value1==0 & value2==0) {return("NA")} 
+  else if (value1==0 | value2==0){return("NA")} 
+  else if (value1==value2 & value1!=0){return("pareil")} 
+  else if (value1>value2){return("supérieur")} 
+  else if (value1<value2) {return("inférieur")}}
+
+for (i in 1:nrow(BaseOut)) {BaseOut[i,16] <- ComparNiv(BaseOut[i, 13],BaseOut[i, 15])}
+
+varcont <- function(BaseOut) {
+  for (j in seq(2, 4, by = 2)){
+    for (i in 1:nrow(BaseOut)) {
+      valeur <- BaseOut[i, j]
+      if (valeur == "Less than 1 hour") {
+        BaseOut[i,j+1] <- 0.5
+      } else if (valeur == "Between 1 and 2 hours") {
+        BaseOut[i,j+1] <- 1.5
+      } else if (valeur == "Between 2 and 3 hours"){
+        BaseOut[i,j+1] <- 2.5
+      } else if (valeur == "Between 3 and 4 hours"){
+        BaseOut[i,j+1] <- 3.5 
+      } else if (valeur == "More than 4 hours"){
+        BaseOut[i,j+1] <- 4.5
+      } else if (valeur == "Don t know" || valeur == "Prefer not to answer") {
+        BaseOut[i,j+1] <- NA
+      }
+    }
+  }
+  return(BaseOut)}
+BaseOut<-varcont(BaseOut)
+
+BaseOut$A017.1[!grepl("^[0-9]+$", BaseOut$A017.1)] <- NA
+BaseOut$A017.1 <- as.numeric(as.character(BaseOut$A017.1))
+BaseOut$A017.1[is.na(BaseOut$A017.1)] <- 0
+
+BaseOut$A017.2[!grepl("^[0-9]+$", BaseOut$A017.2)] <- NA
+BaseOut$A017.2 <- as.numeric(as.character(BaseOut$A017.2))
+BaseOut$A017.2[is.na(BaseOut$A017.2)] <- 0
+
+supp <- function(BaseOut){
+  for (i in 1 : nrow(BaseOut)){
+    if (is.na(BaseOut[i,3]) && is.na(BaseOut[i,5])){
+      BaseOut<-BaseOut[-i,]
+    }
+  }
+  return(BaseOut)
+}
+BaseOut<-supp(BaseOut)
+```
+
+# 1. Description des données
+
+Dans cette partie, nous allons décrire les variables sélectionnées pour
+notre base de données. Ensuite, nous présenterons les tableaux de
+fréquences et les graphiques associés à chaque variable.
+
+## a) Définition de la population, des unités statistiques et des variables
+
+La population initiale étudiée est la population générale âgée de 20 à
+64 ans et vivant dans les 27 pays membres de l’Union Européenne. 42 300
+individus ont répondu au questionnaire. Par souci de simplicité, notre
+travail se concentrera sur le cas de la France. Ainsi, nous avons réduit
+la population à 2500 individus faisant toujours parti de la population
+générale âgée de 20 à 64 ans. Notre unité statistique est donc un
+français âgé de 20 à 64 ans.
+
+Notre base initiale comprenait 217 variables, nous en avons récupéré 8.
+Nous avons retiré 40414 réponses. En raison du nombre de réponses
+supprimées, il est possible que notre étude ne soit pas pleinement
+représentative.
+
+Voici le lien de notre base de données initiales :
+<https://search.gesis.org/research_data/ZA8751>
+
+Tout au long de notre étude, l'expression "après la pandémie" désignera
+la période de juin/juillet 2021, tandis que "avant la pandémie" fera
+référence à la période précédant mars 2020.
+
+Les variables étudiées dans notre base de données sont :
+
+-   **'TempsTravailAvantC' et 'TempsTravailAuj'**: le nombre d’heures
+    hebdomadaires dédiées au travail rémunéré avant la pandémie et
+    aujourd'hui. Ce sont des variables quantitatives.
+
+-   **'TM_apres' et 'TM_avant'** : le nombre d’heures journalières
+    dédiées aux tâches ménagères avant et après la pandémie. Ce sont des
+    variables quantitatives. Nous avons transformé les réponses données
+    en variables quantitatives continues. Nous avons choisi de ne pas
+    représenter les non-réponses (« Don’t know », « Prefer not to answer
+    » et « NA ») et donc de ne pas les inclure dans l’étude. En effet,
+    la conversion en variables continues vise à faire apparaitre des
+    classes correspondant aux réponses du questionnaire, le fait
+    d'enlever les non-réponses garantit cette conversion. Par exemple,
+    la réponse « Less than 1 hour » correspond à la note 0,5 et donc à
+    la classe [0,1]. Notre méthode de conversion des réponses est
+    spécifiée en annexe 1. 
+
+-   **'Sexe'**: le sexe de la personne ayant répondu au questionnaire.
+    C'est une variable qualitative.
+
+-   **'Secteurs'**: le secteur professionnel du répondant. Nous avons
+    réparti les réponses selon les trois secteurs primaire, secondaire
+    et tertiaire. Un quatrième secteur a été créé pour représenter les
+    non-réponses. C'est une variable qualitative.
+
+-   **'Nivétudes' et 'NivétudesPartenaire'**: les niveaux d'études
+    respectifs du répondant et de son partenaire. Ce sont des variables
+    qualitatives. Nous souhaitons étudier l’impact d’une différence de
+    niveau d’études entre les conjoints sur nos autres variables et
+    principalement sur les temps de travail rémunéré et non rémunéré.
+    Ainsi, nous avons classé les niveaux d’étude entre eux en leur
+    associant des notes que nous avons ensuite comparées. Si le
+    répondant ou le partenaire n’a pas répondu, n’a pas souhaité
+    répondre ou n’a pas su, nous avons attribué la note 0. Notre méthode
+    de classification est spécifiée en annexe 3. 
+
+-   **'ComparNiv'**: grâce à la notation des études, nous avons pu créer
+    la variable ComparNiv qui compare le niveau du répondant et de son
+    partenaire. C'est une variable qualitative. Si le répondant a un
+    niveau d’étude plus élevé, la variable retournera « supérieur », si
+    le niveau d’étude du répondant est inférieur à son partenaire, elle
+    retournera « inférieur », s’il est équivalent elle renverra « pareil
+    », enfin ComparNiv sera égale à NA si l’un des deux niveaux ou les
+    deux sont de 0. En effet, la comparaison n’est pas possible si l’une
+    des deux personnes n’a pas répondu, elle pourrait avoir un niveau
+    supérieur ou inférieur.
+
+-   **'Revenu'** : le revenu total du foyer exprimé en décile. C'est une
+    variable qualitative. Les plages de revenus associées à chaque
+    décile sont spécifiées en annexe 2. 
+
+## b) Tableaux de fréquences et graphiques
+
+Pour améliorer la lisibilité de nos graphiques représentant certaines de
+nos variables quantitatives, nous avons utilisé la fonction jitter qui
+permet d'ajouter une petite variation aléatoire aux données, permettant
+ainsi d'éviter que plusieurs observations aient les mêmes valeurs dû à
+notre classification, ce qui rendrait difficile la visualisation de nos
+données.
+
+### Temps de travail rémunéré après crise
+
+```{r, echo=FALSE}
+TempsTravailapres<-BaseOut$A017.1
+classe_TempsTravailapres<-cut(TempsTravailapres,seq(1,80,5))
+addmargins(prop.table(table(classe_TempsTravailapres)))
+hist(TempsTravailapres,main="Distribution du temps de travail rémunéré après crise par semaine",xlab="Temps de travail rémunéré par semaine après crise",ylab="Effectifs",cex.main=0.7,cex.lab = 0.7)
+```
+
+### Temps de travail rémunéré avant crise
+
+```{r, echo=FALSE}
+TempsTravailAvantC<-BaseOut$A017.2
+classe_TempsTravailAvantC<-cut(TempsTravailAvantC,seq(1,80,5))
+addmargins(prop.table(table(classe_TempsTravailAvantC)))
+hist(TempsTravailAvantC,main="Distribution du temps de travail rémunéré avant crise par semaine",xlab="Temps de travail rémunéré par semaine avant crise",ylab="Effectifs",cex.main=0.7,cex.lab = 0.7)
+```
+
+### Temps de travail dédié aux tâches ménagères après crise
+
+```{r,echo=FALSE}
+TM_apres<-BaseOut$TM_apres
+TM_apres_cont <- jitter(TM_apres, factor = 0.01 )
+breaks_temps<- seq(0,5,1)
+classe_TM_apres <- cut(TM_apres_cont, breaks_temps, na.rm=TRUE)
+table(classe_TM_apres)
+hist(TM_apres_cont,main="Distribution du temps de ménage après crise par jour",xlim = c(0,5),xlab="Temps de ménage après crise par jour",ylab="Effectifs",cex.main=0.7,cex.lab = 0.7)
+```
+
+### Temps de travail dédié aux tâches ménagères avant Covid-19
+
+```{r,echo=FALSE}
+TM_avant<-BaseOut$TM_avant
+TM_avant_cont <- jitter(TM_avant, factor = 0.01 )
+breaks_temps<- seq(0,5,1)
+classe_TM_avant <- cut(TM_avant_cont, breaks_temps, na.rm=TRUE)
+table(classe_TM_avant)
+hist(TM_avant_cont,main="Distribution du temps de ménage avant crise par jour",xlim = c(0,5),xlab="Temps de ménage avant crise par jour",ylab="Effectifs",cex.main=0.7,cex.lab = 0.7)
+```
+
+### Sexe
+
+```{r,echo=FALSE}
+Sexe<-BaseOut$A035
+addmargins(table(Sexe))
+pie(table(Sexe),main="Distribution des sexes",cex.main=0.7,cex.lab = 0.7)
+```
+
+### Niveau études
+
+```{r,echo=FALSE}
+ComparNiv<-BaseOut$ComparNiv
+addmargins(prop.table(table(ComparNiv)))
+barplot(table(ComparNiv),xlab="Comparaison des niveaux d'études dans le foyer",ylab="Effectifs",main="Distribution des niveaux d'étude dans le foyer",cex.main=0.7,cex.lab = 0.7)
+```
+
+### Secteurs de métiers
+
+```{r,echo=FALSE}
+Secteurs<-BaseOut$Secteurs
+addmargins(prop.table(table(Secteurs)))
+barplot(table(Secteurs),xlab="Secteurs de métiers",ylab="Effectifs",main="Distribution des secteurs de métiers",cex.main=0.7,cex.lab = 0.7)
+```
+
+### Revenu du foyer
+
+```{r,echo=FALSE}
+Revenu<-BaseOut$A038
+addmargins(prop.table(table(Revenu)))
+barplot(table(Revenu),xlab="Revenu total du foyer",ylab="Effectifs",main="Distribution des revenus totaux des foyers",cex.main=0.7,cex.lab = 0.7)
+```
+
+Procédons aux estimations par intervalles de confiance pour poursuivre l'analyse. 
+
+# 3. Estimations par intervalles de confiance.
+
+Nous allons estimer la moyenne et la variance de deux de nos variables :
+'TempsTravailAvantC' et 'TempsTravailAuj' qui représentent les temps de
+travail hebdomadaires rémunérés des individus de notre population.
+
+## Estimations ponctuelles.
+
+Premièrement, établissons nos estimations ponctuelles.
+
+```{r,echo=FALSE}
+TT_apres<-BaseOut$A017.1
+TT_avant<-BaseOut$A017.2
+moy_TT_apres <- mean(TT_apres, na.rm = TRUE)
+moy_TT_avant <- mean(TT_avant, na.rm = TRUE)
+print(moy_TT_apres)
+print(moy_TT_avant)
+```
+
+Ces estimations ponctuelles nous indiquent qu'avant la pandémie de
+Covid-19, les individus de notre étude ont consacré en moyenne 27,3
+heures par semaine à un emploi rémunéré contre en moyenne 27,1 heures
+par semaine après la pandémie du Covid-19.
+
+```{r,echo=FALSE}
+var_TT_apres <- sd(TT_apres)
+var_TT_avant <- sd(TT_avant)
+print(var_TT_apres)
+print(var_TT_avant)
+```
+
+Ces estimations ponctuelles montrent qu'avant la pandémie, l'écart moyen
+par rapport à la moyenne des heures de travail hebdomadaires rémunérées
+était de 16,6 heures, pour une moyenne de 27,3 heures. Après la
+pandémie, cet écart moyen est de 16,53 heures, pour une moyenne de 27,1
+heures.
+
+Cette dispersion élevée peut nuire à la fiabilité des estimations
+ponctuelles en tant que représentations de l'ensemble de notre
+population. Elle met en évidence la nécessité de compléter nos
+estimations ponctuelles par des intervalles de confiance afin de mieux
+prendre en compte l'incertitude associée.
+
+Procédons désormais aux estimations de ces variables par intervalles de
+confiance.
+
+## Estimations par intervalles de confiance des moyennes, sigmas inconnus, n\>30, niveau de confiance = 90%.
+
+Les lois des variables sont inconnues et la taille des échantillons est
+supérieure à 30.
+
+```{r,echo=FALSE}
+n<-nrow(BaseOut)
+
+sig_TT_apres <-sd(TT_apres)
+a1 <- moy_TT_apres - qnorm(1-(1-0.9)/2)*sig_TT_apres/sqrt(n)
+b1 <- moy_TT_apres + qnorm(1-(1-0.9)/2)*sig_TT_apres/sqrt(n)
+c(a1,b1)
+
+sig_TT_avant <-sd(TT_avant)
+a2 <- moy_TT_avant - qnorm(1-(1-0.9)/2)*sig_TT_avant/sqrt(n)
+b2 <- moy_TT_avant + qnorm(1-(1-0.9)/2)*sig_TT_avant/sqrt(n)
+c(a2,b2)
+```
+
+## Estimations par intervalles de confiance des moyennes, sigmas inconnus, n\>30, niveau de confiance = 95%.
+
+```{r,echo=FALSE}
+a3 <- moy_TT_apres - qnorm(1-(1-0.95)/2)*sig_TT_apres/sqrt(n)
+b3 <- moy_TT_apres + qnorm(1-(1-0.95)/2)*sig_TT_apres/sqrt(n)
+c(a3,b3)
+
+a4 <- moy_TT_avant - qnorm(1-(1-0.95)/2)*sig_TT_avant/sqrt(n)
+b4 <- moy_TT_avant + qnorm(1-(1-0.95)/2)*sig_TT_avant/sqrt(n)
+c(a4,b4)
+```
+
+D'après nos calculs, le temps de travail hebdomadaire rémunéré après la
+pandémie est compris entre 26,47 et 27,72 heures, au seuil de 10%, et
+compris entre 26.35 et 27.85 heures, au seuil de 5%. Le temps de travail
+hebdomadaire rémunéré avant la pandémie est compris entre 26.67 et 27.93
+heures, au seuil de 10% et compris entre 26.55 et 28.05 heures, au seuil
+de 5%.
+
+Il n'y a pas de différence significative entre les deux niveaux de
+confiance et les intervalles sont proches des moyennes calculées
+précédemment. Le temps consacré au travail rémunéré n'a pas réellement
+changé entre les deux périodes.
+
+De plus, il est important de noter que la taille de l'intervalle de
+confiance permettant d'estimer le temps consacré au travail rémunéré
+avant et après la crise est relativement petite au seuil de 5%. Cette précision est due à la taille élevée de notre
+échantillon d'étude. L'intervalle devient encore plus étroit au seuil de
+10%, ce qui confirme la corrélation entre le niveau de confiance et le
+degré de précision des estimations.
+
+L'étude du temps de travail rémunéré nous a permis de comprendre qu'il
+puisse exister des tendances internes spécifiques. Dans la suite de
+notre analyse, nous nous concentrerons sur le temps de travail ménager
+consacré par les individus, afin de vérifier si ce dernier suit des
+dynamiques similaires à celles du travail rémunéré. Nous en conclurons
+qu'il est plus pertinent d'observer les tendances internes au sein de la
+population plutôt que de se limiter à l'examen des variations globales.
+
+# 4. Tests de conformité
+
+Nous allons faire un test de conformité sur les variables 'TM_apres' et
+'TM_avant' afin de tester au seuil de 5%, puis de 10%, si les individus
+ont déclaré avoir consacré plus de temps aux tâches ménagères après la
+pandémie du Covid-19 par rapport à avant la crise.
+
+Nos hypothèses sont : H0: moy_TMavant = moy_TMapres vs H1: moy_TMavant
+\< moy_TMapres, avec : - H0: la pandémie n'a pas augmenté le temps de
+travail ménager pour la majorité des personnes: moy_TMavant =
+moy_TMapres - H1: la pandémie a augmenté le temps de travail ménager
+pour la majorité de la population: moy_TMavant \< moy_TMapres
+
+Avec moy_TMavant, la moyenne du temps dédié aux tâches ménagères par les
+individus avant la crise et moy_TMapres, la moyenne du temps dédié aux
+tâches ménagères par les individus après la crise.
+
+```{r,echo=FALSE}
+TM_avant<-BaseOut$TM_avant
+TM_apres<-BaseOut$TM_apres
+t.test(TM_avant,TM_apres,alternative="less",var.equal = FALSE)
+t.test(TM_avant,TM_apres,alternative="less",var.equal = FALSE,conf.level = 0.90)
+```
+
+La proportion d'individus ayant déclaré avoir plus consacré plus de
+temps aux tâches ménagères après la crise du Covid-19 est environ de
+17%. La p-value est de 0,2077 aux seuils de 5% et 10% donc on ne rejette
+pas l'hypothèse nulle. On en conclut que la pandémie n'a pas augmenté le
+temps de travail ménager des individus, aux seuils de 5% et 10%.
+
+Ces résultats ne sont pas surprenants, étant donné que l'analyse a été
+réalisée sur la population générale sans distinction de sous-groupes
+tels que le genre, le niveau d'éducation ou le revenu du foyer. En
+effet, les tests effectués ne nous permettent pas d'explorer les
+dynamiques internes. Il est possible, par exemple, que les femmes aient
+consacré davantage de temps aux tâches ménagères après la pandémie,
+tandis que les hommes en aient consacré moins. Il se pourrait également
+que cette tendance varie selon le niveau de revenu des foyers, avec des
+différences notables entre les foyers plus riches et plus pauvres, ou
+encore entre les individus les plus éduqués et ceux ayant un niveau
+d'éducation moins élevé.
+
+Il est donc nécessaire de distinguer des sous-groupes au sein de notre
+population afin de fournir des réponses plus précises à notre
+problématique.
+
+# 5. Tests de comparaison
+
+## Comparaison du temps de tâches ménagères avant et après crise en fonction du sexe.
+
+Nous divisons notre population en deux sous-groupes en fonction du sexe
+des individus et comparons le temps dédié aux tâches ménagères avant et
+après la crise des hommes et des femmes. Nous cherchons à savoir si les
+femmes auraient vu leur temps de tâches ménagères augmenté
+significativement par rapport aux hommes avec la crise du Covid-19.
+
+Pour les femmes, nos hypothèses sont: H0: m1=m2 contre H1: m1\<m2. Avec
+: - m1 : la moyenne du temps de tâches ménagères avant crise pour les
+femmes - m2 : la moyenne du temps de tâches ménagères après crise pour
+les femmes
+
+```{r,echo=FALSE}
+BaseFavant<- subset(BaseOut, A035 == "Female", select = c(TM_avant,A035))
+BaseFapres<- subset(BaseOut, A035 == "Female", select = c(TM_apres,A035))
+t.test(BaseFavant$TM_avant,BaseFapres$TM_apres,alternative="less",var.equal = FALSE)
+t.test(BaseFavant$TM_avant,BaseFapres$TM_apres,alternative="less",var.equal = FALSE,conf.level = 0.90)
+```
+
+Nous observons que la moyenne du temps consacré aux tâches ménagères
+chez les femmes augmente après la crise. Toutefois, la p-value est de
+0,08, aux seuils de 5% et 10%. Par conséquent, nous ne pouvons pas
+rejeter l'hypothèse nulle au seuil de 5% mais nous la rejetons au seuil
+de 10%. Ainsi, au seuil de 10%, nous pouvons affirmer que la moyenne du
+temps de travail ménager pour les femmes a augmenté après la pandémie.
+Cela va dans le sens de notre hypothèse initiale.
+
+Pour les hommes, nos hypothèses sont: H0: m1=m2 contre H1: m1\<m2. Avec
+: - m1 : la moyenne du temps de tâches ménagères avant crise pour les
+hommes - m2 : la moyenne du temps de tâches ménagères après crise pour
+les hommes
+
+```{r,echo=FALSE}
+BaseHapres<- subset(BaseOut, A035 == "Male", select = c(TM_apres,A035))
+BaseHavant<- subset(BaseOut, A035 == "Male", select = c(TM_avant,A035))
+t.test(BaseHavant$TM_avant,BaseHapres$TM_apres,alternative="less",var.equal = FALSE)
+t.test(BaseHavant$TM_avant,BaseHapres$TM_apres,alternative="less",var.equal = FALSE,conf.level = 0.90)
+```
+
+Nous observons que la moyenne du temps consacré aux tâches ménagères
+chez les hommes baisse légèrement après la crise. Toutefois, la p-value
+est de 0,6, aux seuils de 5% et 10%. Par conséquent, nous ne pouvons pas
+rejeter l'hypothèse nulle.
+
+En analysant les moyennes, nous constatons une dynamique inverse entre
+les femmes et les hommes. En effet, les femmes ont consacré davantage de
+temps que les hommes aux tâches ménagères après la pandémie. Cependant,
+l'analyse des p-values montre qu'il n'est pas possible d'affirmer que la
+pandémie ait entraîné une augmentation significative du temps consacré
+aux tâches ménagères pour les deux sexes.
+
+## Comparaison du temps de travail rémunéré avant et après crise en fonction du sexe.
+
+Nous divisons notre population en deux sous-groupes en fonction du sexe
+des individus et comparons le temps dédié au travail rémunéré avant et
+après la crise des hommes et des femmes.
+
+Pour les femmes, nos hypothèses sont: H0: m1=m2 contre H1: m1\<m2. Avec
+: - m1 : la moyenne du temps de travail rémunéré avant crise pour les
+femmes - m2 : la moyenne du temps de travail rémunéré après crise pour
+les femmes
+
+```{r,echo=FALSE}
+BaseTT_F_apres<- subset(BaseOut, A035 == "Female", select = c(A017.1,A035))
+BaseTT_F_avant<- subset(BaseOut, A035 == "Female", select = c(A017.2,A035))
+t.test(BaseTT_F_avant$A017.2,BaseTT_F_apres$A017.1,alternative="less",var.equal = FALSE)
+t.test(BaseTT_F_avant$A017.2,BaseTT_F_apres$A017.1,alternative="less",var.equal = FALSE,conf.level = 0.90)
+```
+
+Nous observons que la moyenne du temps consacré au travail rémunéré chez
+les femmes baisse légèrement après la crise. De plus, la p-value est de
+0,7, aux seuils de 5% et 10%. Par conséquent, nous ne pouvons pas
+rejeter l'hypothèse nulle.
+
+Pour les hommes, nos hypothèses sont: H0: m1=m2 contre H1: m1\<m2. Avec
+: - m1 : la moyenne du temps de travail rémunéré avant crise pour les
+hommes - m2 : la moyenne du temps de travail rémunéré après crise pour
+les hommes
+
+```{r,echo=FALSE}
+BaseTT_H_apres<- subset(BaseOut, A035 == "Male", select = c(A017.1,A035))
+BaseTT_H_avant<- subset(BaseOut, A035 == "Male", select = c(A017.2,A035))
+t.test(BaseTT_H_avant$A017.2,BaseTT_H_apres$A017.1,alternative="less",var.equal = FALSE)
+t.test(BaseTT_H_avant$A017.2,BaseTT_H_apres$A017.1,alternative="less",var.equal = FALSE,conf.level = 0.90)
+```
+
+Nous observons que la moyenne du temps consacré au travail rémunéré chez
+les hommes ne change pas après la crise. De plus, la p-value est de 0,6,
+aux seuils de 5% et 10%. Par conséquent, nous ne pouvons pas rejeter
+l'hypothèse nulle.
+
+Nous pensions pouvoir démontrer que les individus ont travaillé
+davantage après la pandémie qu'avant, en plus des tâches ménagères.
+Cependant, les p-values sont supérieures aux seuils, ce qui nous empêche
+de rejeter les hypothèses nulles. Ainsi, on ne peut pas conclure que les
+individus ont nécessairement travaillé plus après la pandémie.
+
+## Comparaison du temps de tâches ménagères avant et après crise en fonction du niveau d'étude.
+
+Nous divisons notre population en sous-groupes en fonction du niveau
+d'études des couples et du sexe des individus. Nous allons comparer le
+temps consacré par les femmes aux tâches ménagères avant et après la
+crise, en fonction de leur niveau d'études, et le comparer à celui de
+leur mari. Nous cherchons à tester l'hypothèse selon laquelle les femmes
+dont le niveau d'études est inférieur à celui de leur mari consacrent
+plus de temps aux tâches ménagères, et à déterminer si cette tendance
+s'est amplifiée avec la pandémie.
+
+Nos hypothèses sont: H0 : m inf = m sup contre H1 : m inf \> m sup. Avec
+: - m inf : la moyenne du temps de tâches ménagères des femmes ayant un
+niveau d'études inférieur à celui de leur mari. - m sup : la moyenne du
+temps de tâches ménagères des femmes ayant un niveau d'études supérieur
+à celui de leur mari.
+
+Nos résultats pour avant la crise du Covid-19:
+
+```{r,echo=FALSE}
+BaseNiv_avant<-subset(BaseOut, A035 == "Female", select = c(TM_avant,A035,ComparNiv))
+BaseNivInf_avant<-subset(BaseNiv_avant,ComparNiv == "inférieur", select = c(TM_avant,A035,ComparNiv))
+BaseNivSup_avant<-subset(BaseNiv_avant,ComparNiv == "supérieur", select = c(TM_avant,A035,ComparNiv))
+
+t.test(BaseNivInf_avant$TM_avant,BaseNivSup_avant$TM_avant,alternative="greater",var.equal = FALSE,correct=FALSE)
+t.test(BaseNivInf_avant$TM_avant,BaseNivSup_avant$TM_avant,alternative="greater",var.equal = FALSE,correct=FALSE, conf.level = 0.90)
+```
+
+Nos résultats pour après la crise du Covid-19:
+
+```{r,echo=FALSE}
+BaseNiv_apres<-subset(BaseOut, A035 == "Female", select = c(TM_apres,A035,ComparNiv))
+BaseNivInf_apres<-subset(BaseNiv_apres,ComparNiv == "inférieur", select = c(TM_apres,A035,ComparNiv))
+BaseNivSup_apres<-subset(BaseNiv_apres,ComparNiv == "supérieur", select = c(TM_apres,A035,ComparNiv))
+
+t.test(BaseNivInf_apres$TM_apres,BaseNivSup_apres$TM_apres,alternative="greater",var.equal = FALSE,correct=FALSE)
+t.test(BaseNivInf_apres$TM_apres,BaseNivSup_apres$TM_apres,alternative="greater",var.equal = FALSE,correct=FALSE, conf.level = 0.90)
+```
+
+À travers l'analyse des moyennes, nous constatons que, quel que soit le
+niveau d'études des femmes au sein de leur foyer, leur temps consacré
+aux tâches ménagères a augmenté après la pandémie. Nous observons
+également que les femmes ayant un niveau d'études supérieur consacrent
+davantage de temps aux tâches ménagères que celles moins instruites,
+tant avant qu'après la crise. Cela contredit notre hypohèse initiale.
+Les p-values étant supérieures aux seuils, nous ne pouvons pas rejeter
+l'hypothèse nulle.
+
+Malgré les résultats des p-values, qui nous ont conduits à ne pas
+rejeter nos hypothèses initiales, l'analyse des moyennes effectives
+montre que, pour un temps de travail rémunéré hebdomadaire inchangé, les
+femmes ont constaté une augmentation de leur temps consacré aux tâches
+ménagères par rapport aux hommes.
+
+Désormais, nous allons tester l'indépedance de nos variables.
+
+# 6. Tests d'indépendance.
+
+## Le temps consacré aux tâches ménagères après la crise et le niveau d'étude
+
+**Tableau des profils-lignes**
+
+```{r,echo=FALSE}
+TM_apres_cut <-cut(BaseOut$TM_apres, seq(0,5,1))
+BaseTMapresNiv <- table(BaseOut$ComparNiv,TM_apres_cut)
+addmargins(prop.table(addmargins(BaseTMapresNiv,1),1),2)
+```
+
+**Test d'indépendance**
+
+```{r,echo=FALSE}
+TM_apres_niv = BaseNiv_apres$TM_apres
+Niv_TM_apres = BaseNiv_apres$ComparNiv
+# Test à 5%
+chisq <- chisq.test(TM_apres_niv, Niv_TM_apres, correct = FALSE)
+print(chisq)
+tab_obs<-chisq$observed
+addmargins(tab_obs)
+tab_exp <- round(chisq$expected,2)
+addmargins(tab_exp) # effectifs théoriques supérieurs à 4, on peut faire le test. 
+```
+
+La p-value étant inférieure à 5 % et 10 %, nous rejetons l'hypothèse
+d'indépendance. Il existe donc une relation significative entre le
+niveau d'études des femmes et celui de leur partenaire, d'une part, et
+le temps consacré par les femmes aux tâches ménagères, d'autre part. Ce
+phénomène peut s'expliquer par divers facteurs sociaux, culturels et
+économiques. Tout d'abord, les normes sociales influencent fortement la
+répartition des tâches domestiques. Dans de nombreuses sociétés, même
+lorsque les femmes possèdent un niveau d'études élevé, elles sont
+souvent perçues comme les principales responsables des tâches ménagères.
+
+## Le temps consacré aux tâches ménagères et le revenu du foyer
+
+Le niveau d'études et les revenus sont étroitement corrélés, ce qui nous
+amène à effectuer les tests statistiques sur le revenu total du foyer.
+
+**Tableau des profils-lignes**
+
+```{r,echo=FALSE}
+TM_apres_cut <-cut(BaseOut$TM_apres, seq(0,5,1))
+BaseTMapresRev <- table(BaseOut$A038,TM_apres_cut)
+addmargins(prop.table(addmargins(BaseTMapresRev,1),1),2)
+```
+
+**Test d'indépendance**
+
+```{r,echo=FALSE}
+BaseTMapresRev <- subset(BaseOut, select = c(TM_apres,A038))
+TM_apres_Rev = BaseTMapresRev$TM_apres
+Rev_TM_apres = BaseTMapresRev$A038
+# Test à 5%
+chisq <- chisq.test(TM_apres_Rev, Rev_TM_apres, correct = FALSE)
+print(chisq)
+tab_obs<-chisq$observed
+addmargins(tab_obs)
+tab_exp <- round(chisq$expected,2)
+addmargins(tab_exp) # effectifs théoriques supérieurs à 4, on peut faire le test.
+```
+
+La p-value étant inférieure à 5 % et 10 %, nous rejetons l'hypothèse
+d'indépendance. Il existe donc une relation significative entre le
+décile de revenu total du foyer et le temps consacré aux tâches
+ménagères. Ce phénomène peut s'expliquer par des facteurs économiques et
+sociaux.
+
+Tout d'abord, les foyers à revenu élevé disposent généralement des
+ressources nécessaires pour externaliser les tâches ménagères, par
+exemple en recourant à une aide domestique, ce qui permet de réduire le
+temps consacré à ces activités. En revanche, les foyers à revenu plus
+faible peuvent rencontrer des difficultés à externaliser ces tâches, ce
+qui peut entraîner une plus grande répartition de ce temps au sein du
+foyer.
+
+De plus, les foyers à revenus plus modestes ont parfois des structures
+familiales plus complexes, comme la présence de plusieurs enfants ou de
+membres de la famille élargie, ce qui augmente le temps consacré aux
+tâches domestiques. Par ailleurs, le revenu peut également influencer la
+perception des rôles au sein du foyer : dans un ménage à revenu plus
+faible, où l'un des membres (souvent la femme) ne travaille pas ou a un
+salaire moins élevé, il peut être socialement attendu que cette personne
+prenne en charge une part plus importante des tâches ménagères.
+
+## Le temps consacré aux tâches ménagères et le sexe
+
+**Tableau des profils-lignes**
+
+```{r,echo=FALSE}
+TM_apres_cut <-cut(BaseOut$TM_apres, seq(0,5,1))
+BaseTMapresSexe <- table(BaseOut$A035,TM_apres_cut)
+addmargins(prop.table(addmargins(BaseTMapresSexe,1),1),2)
+```
+
+**Test d'indépendance**
+
+```{r,echo=FALSE}
+BaseTMapresSexe <- subset(BaseOut, select = c(TM_apres,A035))
+TM_apres_Sexe = BaseTMapresSexe$TM_apres
+Sexe_TM_apres = BaseTMapresSexe$A035
+# Test à 5%
+chisq <- chisq.test(TM_apres_Sexe, Sexe_TM_apres, correct = FALSE)
+print(chisq)
+tab_obs<-chisq$observed
+addmargins(tab_obs)
+tab_exp <- round(chisq$expected,2)
+addmargins(tab_exp) # effectifs théoriques supérieurs à 4, on peut faire le test.
+```
+
+La p-value étant supérieure au seuil de 5 %, nous ne pouvons pas rejeter
+l'hypothèse d'indépendance. En revanche, au seuil de 10 %, nous rejetons
+cette hypothèse. Ainsi, au seuil de 10 %, il existe une relation
+significative entre le temps consacré aux tâches ménagères et le sexe.
+Historiquement, les femmes ont été associées aux responsabilités
+domestiques et à l'entretien du foyer, tandis que les hommes étaient
+perçus comme les principaux pourvoyeurs économiques. Nous observons la
+persistance de ces attentes sociales et de ces rôles traditionnels, même
+si les femmes participent désormais autant que les hommes au marché du
+travail, comme nous l'avons démontré dans la question précédente.
+
+# Conclusion
+
+Nous avons cherché à étudier l'impact de la crise du Covid-19 sur la répartition des tâches domestiques au sein des ménages français, en prenant en compte le genre et les conditions socio-économiques.
+Au début de notre étude, nous avons formulé plusieurs hypothèses, dont certaines n'ont pas été confirmées. En effet, si certaines de nos théories ont été partiellement validées par l'analyse des moyennes empiriques, nos autres tests n'ont pas toujours corroboré ces résultats. Par conséquent, nous avons dû rejeter un certain nombre d'hypothèses.
+Nous avions supposé que les femmes auraient consacré davantage de temps aux tâches ménagères après la pandémie, par rapport aux hommes, mais nos tests n'ont pas confirmé cette hypothèse. De plus, nous envisagions que la hausse du temps consacré aux tâches ménagères affecterait davantage les ménages à revenus plus faibles et moins éduqués, ce qui n'a pas non plus été le cas.
+Dans un premier temps, nous avons analysé les intervalles de confiance pour nos variables relatives au temps de travail rémunéré, mais ceux-ci n'ont pas révélé de changements significatifs avant et après la pandémie. Nous avons émis l'hypothèse que cette absence de variation pourrait être liée à des tendances internes, plutôt qu'à une analyse globale des données. Nous avons donc approfondi notre étude en examinant les sous-groupes à l'aide de tests de comparaison, mais, encore une fois, nous n'avons pas rejeté nos hypothèses nulles, ce qui contredisait nos attentes initiales.
+L’analyse de l'indépendance des variables a permis de mieux comprendre leurs relations. Nous avons ainsi observé des corrélations significatives entre certaines variables, telles que le niveau d’études des femmes et leur temps consacré aux tâches ménagères, le revenu total du foyer et le temps que les femmes y consacrent, ou encore entre le sexe et le temps passé aux tâches domestiques. Cependant, le fait que nos tests de comparaison et d'intervalles de confiance n'aient pas reflété ces corrélations suggère que nos résultats pourraient avoir été influencés par des biais.
+Nous pensons que ces biais peuvent être liés à la réduction significative de la taille de notre échantillon, ce qui a peut-être affecté la représentativité de nos résultats pour la population générale. De plus, un grand nombre de non-réponses pour certaines variables a pu également influencer la fiabilité de nos conclusions.
+
